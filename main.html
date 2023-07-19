@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>?咩事?</title>
+    <style>
+        
+        body {
+            margin: 0;
+            background-image: url('img/main/bg00.png');
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+    
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            border: none;
+        }
+
+        .image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: block;
+            object-fit: cover;
+            opacity: 1.0;
+            border: none;
+            z-index: 9999;
+        }
+
+        .image:nth-child(1) {
+            width: 219px;
+            height: auto;
+            z-index: 20;
+            transform: translate(90vw, 53vh);
+        }
+
+        .image:nth-child(2) {
+            width: auto;
+            height: 279px;
+            z-index: 19;
+            transform: translate(20vw, 26vh);
+        }
+
+        .image:nth-child(3) {
+            width: 409px;
+            height: auto;
+            z-index: 18;
+            transform: translate(8vw, 54vh);
+        }
+        
+        .image:nth-child(4) {
+            width: auto;
+            height: 273px;
+            z-index: 17;
+            transform: translate(78vw, 0vh);
+        }
+    
+        .image:nth-child(5) {
+            width: auto;
+            height: 620px;
+            z-index: 16;
+            transform: translate(63vw, 81vh);
+        }
+    
+        .image:nth-child(6) {
+            width: auto;
+            height: 250px;
+            z-index: 15;
+            transform: translate(28vw, 69vh);
+        }
+        
+        .image:nth-child(7) {
+            width: auto;
+            height: 257px;
+            z-index: 14;
+            transform: translate(0vw, 17vh);
+        }
+    
+        .image:nth-child(8) {
+            width: 383px;
+            height: auto;
+            z-index: 13;
+            transform: translate(52vw, 4vh);
+        }
+        .image:nth-child(9) {
+            width: 162px;
+            height: auto;
+            z-index: 12;
+            transform: translate(19vw, 66vh);
+        }
+        .image:nth-child(10) {
+            width: auto;
+            height: 437px;
+            z-index: 11;
+            transform: translate(50vw, 18vh);
+        }
+    
+        .image:nth-child(11) {
+            width: 150px;
+            height: auto;
+            z-index: 10;
+            transform: translate(28vw, 11vh);
+        }
+    
+        .image:nth-child(12) {
+            width: 127px;
+            height: 127;
+            z-index: 9;
+            transform: translate(13vw, 83vh);
+        }
+    
+        .image:nth-child(13) {
+            width: 388px;
+            height: auto;
+            z-index: 8;
+            transform: translate(0vw, 66vh);
+        }
+    
+        .image:nth-child(14) {
+            width: auto;
+            height: 255px;
+            z-index: 7;
+            transform: translate(82vw, 22vh);
+        }
+    
+        .image:nth-child(15) {
+            width: 129px;
+            height: auto;
+            z-index: 40;
+            transform: translate(89vw, 47vh);
+        }
+    
+        .image:nth-child(16) {
+            width: auto;
+            height: 349px;
+            z-index: 5;
+            transform: translate(57vw, 73vh);
+        }
+    
+        .image:nth-child(17) {
+            width: 121px;
+            height: auto;
+            z-index: 4;
+            transform: translate(56vw, 16vh);
+        }
+    
+        .image:nth-child(18) {
+            width: 322px;
+            height: auto;
+            z-index: 3;
+            transform: translate(62vw, 24vh);
+        }
+    
+        .image:nth-child(19) {
+            width: 238px;
+            height: auto;
+            z-index: 2;
+            transform: translate(4vw, 1vh);
+        }
+    
+        .image:nth-child(20) {
+            width: 368px;
+            height: auto;
+            z-index: 1;
+            transform: translate(88vw, 0vh);
+        }
+        .image:nth-child(21) {
+            width: auto;
+            height: 96px;
+            z-index: 9;
+            transform: translate(6vw, 23vh);
+        }
+        .image:nth-child(22) {
+            width: auto;
+            height: 107px;
+            z-index: 5;
+            transform: translate(6vw, 23vh);
+        }
+    
+        .image:nth-child(23) {
+            width: 113px;
+            height: auto;
+            z-index: 10;
+            transform: translate(36vw, 0vh);
+        }
+    
+        .image:nth-child(24) {
+            width: auto;
+            height: 102px;
+            z-index: 2;
+            transform: translate(46vw, 23vh);
+        }
+    
+        .gifimage {
+            position: absolute;
+            width: 320px;
+            height: auto;
+            z-index: 1;
+            transform: translate(40vw, 40vh);
+        }
+    
+        .overlay {
+            
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            border: none;
+            background-color: rgba(0, 0, 0, 0);
+            display: none;
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; 
+        }
+        
+        .overlay p {
+            
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            z-index: 9999;
+            
+            font-size: 10em;
+            color: #8e05f7;
+            text-align: center;
+            
+            transform: translate(0vw, 0vh);
+        }
+    
+    </style>
+</head>
+<body>
+    <audio autoplay muted>
+      <source src="img/main/soundscape.m4a" type="audio/mp4">
+      Your browser does not support the audio element.
+    </audio>
+    <div class="container">
+        
+        <img src="img/main/img01.jpg" class="image", datahover="img/main/img21.jpg">
+        <img src="img/main/img02.jpg" class="image", datahover="img/main/img22.jpg">
+        <img src="img/main/img03.jpg" class="image", datahover="img/main/img23.jpg">
+        <img src="img/main/img04.jpg" class="image", datahover="img/main/img24.jpg">
+        <img src="img/main/img05.jpg" class="image", datahover="img/main/img25.jpg">
+        <img src="img/main/img06.jpg" class="image", datahover="img/main/img26.jpg">
+        <img src="img/main/img07.jpg" class="image", datahover="img/main/img27.jpg">
+        <img src="img/main/img08.jpg" class="image", datahover="img/main/img28.jpg">
+        <img src="img/main/img09.jpg" class="image", datahover="img/main/img29.jpg">
+        <img src="img/main/img10.jpg" class="image", datahover="img/main/img30.jpg">
+        <img src="img/main/img11.jpg" class="image", datahover="img/main/img31.jpg">
+        <img src="img/main/img12.jpg" class="image", datahover="img/main/img32.jpg">
+        <img src="img/main/img13.jpg" class="image", datahover="img/main/img33.jpg">
+        <img src="img/main/img14.jpg" class="image", datahover="img/main/img34.jpg">
+        <img src="img/main/img15.jpg" class="image", datahover="img/main/img35.jpg">
+        <img src="img/main/img16.jpg" class="image", datahover="img/main/img36.jpg">
+        <img src="img/main/img17.jpg" class="image", datahover="img/main/img37.jpg">
+        <img src="img/main/img18.jpg" class="image", datahover="img/main/img38.jpg">
+        <img src="img/main/img19.jpg" class="image", datahover="img/main/img39.jpg">
+        <img src="img/main/img20.jpg" class="image", datahover="img/main/img40.jpg">
+        <img src="img/main/img21.jpg" class="image", datahover="img/main/img41.jpg">
+        <img src="img/main/img22.jpg" class="image", datahover="img/main/img41.jpg">
+        <img src="img/main/img23.jpg" class="image", datahover="img/main/img42.jpg">
+        <img src="img/main/img24.jpg" class="image", datahover="img/main/img43.jpg">
+            
+        <a href="cam.html"><img src="img/main/lift.gif" class='gifimage'alt="lift.gif"></a>
+        
+        <div class="overlay">
+            <p id="overlay_p"></p>
+        </div>
+    </div>
+</body>
+<script src="main_script.js"></script>
+</html>
