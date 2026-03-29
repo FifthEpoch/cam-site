@@ -54,8 +54,9 @@ function handleImageSwap() {
     this.style.width = size + 'px';
     this.style.height = 'auto';
   } else {
-    this.style.width = '';
-    this.style.height = '';
+    var size = Math.floor(Math.random() * 300) + 200;
+    this.style.width = size + 'px';
+    this.style.height = 'auto';
   }
 }
 

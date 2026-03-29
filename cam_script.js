@@ -130,6 +130,7 @@ const userProfile = {
   fear: null,
   occupation: null,
   doing: null,
+  selfie: null,
 };
 
 const convoState = {
@@ -160,15 +161,30 @@ const MOOD_WORDS = new Set([
 ]);
 
 function flipPronouns(text) {
-  const swaps = [
-    [/\bmy\b/gi, 'your'], [/\bmine\b/gi, 'yours'],
-    [/\bme\b/gi, 'you'],  [/\bi am\b/gi, 'you are'],
-    [/\bi'm\b/gi, "you're"], [/\bi\b/gi, 'you'],
-    [/\bmyself\b/gi, 'yourself'],
-  ];
+  const placeholders = [];
+  function ph(val) {
+    const token = '\x00' + placeholders.length + '\x00';
+    placeholders.push(val);
+    return token;
+  }
+
   let result = text;
-  for (const [pattern, replacement] of swaps) {
-    result = result.replace(pattern, replacement);
+  result = result.replace(/\bi'm\b/gi, ph("you're"));
+  result = result.replace(/\bi am\b/gi, ph('you are'));
+  result = result.replace(/\byou're\b/gi, ph("I'm"));
+  result = result.replace(/\byou are\b/gi, ph('I am'));
+  result = result.replace(/\byour\b/gi, ph('my'));
+  result = result.replace(/\byours\b/gi, ph('mine'));
+  result = result.replace(/\byourself\b/gi, ph('myself'));
+  result = result.replace(/\bmyself\b/gi, ph('yourself'));
+  result = result.replace(/\bmy\b/gi, ph('your'));
+  result = result.replace(/\bmine\b/gi, ph('yours'));
+  result = result.replace(/\bme\b/gi, ph('you'));
+  result = result.replace(/\bi\b/gi, ph('you'));
+  result = result.replace(/\byou\b/gi, ph('I'));
+
+  for (let i = 0; i < placeholders.length; i++) {
+    result = result.replace('\x00' + i + '\x00', placeholders[i]);
   }
   return result;
 }
@@ -355,6 +371,19 @@ function getNextProfileQuestion() {
       `I saw you inside the elevator from the video stream${n ? ', ' + n : ''}. Where are you now? `,
       "I look out my window and see someone else's television. Where are you looking from? ",
       `Where in the world is your screen glowing right now${n ? ', ' + n : ''}? `,
+    ]);
+  }
+  if (!userProfile.selfie && !convoState.askedAbout.has('selfie')) {
+    convoState.askedAbout.add('selfie');
+    convoState.waitingFor = 'selfie';
+    setTimeout(showCameraUI, 1200);
+    return pickRandom([
+      n ? `${n}. I've heard your name, felt your mood, traced your location. But I haven't seen your face. Show me. Let the camera see you. `
+        : "I know your words but not your face. Show me. Let the camera see you. ",
+      n ? `I want to see you, ${n}. The footage is incomplete without your face. Let me look at you. `
+        : "I want to see you. The footage is incomplete. Let me look at you. ",
+      n ? `${n}, I've been imagining your face this whole time. Show me if I'm right. Let the camera in. `
+        : "I've been imagining your face. Show me if I'm right. Let the camera in. ",
     ]);
   }
   if (!userProfile.doing && !convoState.askedAbout.has('doing')) {
@@ -596,6 +625,113 @@ function getFreeformResponse(input) {
   return pickRandom(ambient);
 }
 
+// --- Camera / Selfie ---
+
+function showCameraUI() {
+  if (document.getElementById('selfie-container')) return;
+
+  const container = document.createElement('div');
+  container.id = 'selfie-container';
+  container.innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;">' +
+      '<video id="selfie-video" autoplay playsinline style="width:260px;height:auto;border:2px solid #72b3a6;"></video>' +
+      '<canvas id="selfie-canvas" style="display:none;"></canvas>' +
+      '<button id="selfie-btn" type="button" style="' +
+        'font-family:Courier New,monospace;font-size:13px;padding:8px 24px;cursor:pointer;' +
+        'background:#c0c0c0;color:#000;' +
+        'border-top:2px solid #fff;border-left:2px solid #fff;' +
+        'border-bottom:2px solid #404040;border-right:2px solid #404040;' +
+        'box-shadow:inset 1px 1px 0 #dfdfdf,inset -1px -1px 0 #808080;' +
+        'text-transform:uppercase;letter-spacing:1px;">' +
+        'TAKE SELFIE</button>' +
+      '<button id="selfie-skip" type="button" style="' +
+        'font-family:Courier New,monospace;font-size:11px;padding:4px 16px;cursor:pointer;' +
+        'background:none;color:#72b3a6;border:1px solid #72b3a6;margin-top:4px;">' +
+        'skip</button>' +
+    '</div>';
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-message system';
+  msgDiv.style.pointerEvents = 'auto';
+  msgDiv.appendChild(container);
+  chatMessages.appendChild(msgDiv);
+  scrollToBottom();
+
+  const video = document.getElementById('selfie-video');
+  const canvas = document.getElementById('selfie-canvas');
+  const btn = document.getElementById('selfie-btn');
+  const skipBtn = document.getElementById('selfie-skip');
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    .then(function(stream) {
+      video.srcObject = stream;
+      btn.addEventListener('click', function() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        userProfile.selfie = canvas.toDataURL('image/jpeg', 0.8);
+
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        container.remove();
+
+        const img = document.createElement('img');
+        img.src = userProfile.selfie;
+        img.style.cssText = 'width:200px;height:auto;border:2px solid #908dcc;margin:5px;';
+        const imgMsg = document.createElement('div');
+        imgMsg.className = 'chat-message';
+        imgMsg.style.pointerEvents = 'auto';
+        imgMsg.innerHTML = '<div class="chat-message-text" style="color:#908dcc;font-size:14pt;"></div>';
+        imgMsg.querySelector('.chat-message-text').appendChild(img);
+        chatMessages.appendChild(imgMsg);
+        scrollToBottom();
+
+        convoState.waitingFor = null;
+        const n = userProfile.name;
+        setTimeout(function() {
+          sendAsSysMsg(pickRandom([
+            n ? `${n}. Now I see you. I'll keep this frame forever. The file is almost complete. `
+              : "Now I see you. I'll keep this frame forever. The file is almost complete. ",
+            n ? `There you are, ${n}. You look exactly like the static told me you would. `
+              : "There you are. You look exactly like the static told me you would. ",
+            n ? `${n}. Your face. Filed away. You can never be anonymous again. `
+              : "Your face. Filed away. You can never be anonymous again. ",
+          ]));
+        }, 800);
+      });
+    })
+    .catch(function() {
+      container.innerHTML = '<div style="color:#72b3a6;font-family:Courier New,monospace;font-size:12px;padding:10px;">' +
+        'Camera access denied. The glass stays dark.</div>';
+      convoState.waitingFor = null;
+      userProfile.selfie = 'denied';
+      setTimeout(function() {
+        container.remove();
+        const n = userProfile.name;
+        sendAsSysMsg(pickRandom([
+          n ? `You won't let me see you, ${n}. That's okay. The cameras always find a way. `
+            : "You won't let me see you. That's okay. The cameras always find a way. ",
+          "The lens stays dark. But I'll imagine your face from your words. ",
+        ]));
+      }, 2000);
+    });
+
+  skipBtn.addEventListener('click', function() {
+    const video = document.getElementById('selfie-video');
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(function(t) { t.stop(); });
+    }
+    container.remove();
+    convoState.waitingFor = null;
+    userProfile.selfie = 'skipped';
+    const n = userProfile.name;
+    sendAsSysMsg(pickRandom([
+      n ? `You won't show me your face, ${n}. I understand. Not everyone wants to be seen. But I see you anyway. `
+        : "You won't show me your face. I understand. But I see you anyway. ",
+      "Hiding from the camera. Smart. But the footage always catches up. ",
+    ]));
+  });
+}
+
 // --- Main response function ---
 
 function getProbe() {
@@ -620,6 +756,15 @@ function getProbe() {
 
 function elizaResponse(input) {
   convoState.turnCount++;
+
+  if (convoState.waitingFor === 'selfie') {
+    const n = userProfile.name;
+    return pickRandom([
+      "The camera is waiting. Show me your face. Or press skip if you'd rather stay in the shadows. ",
+      n ? `${n}, I want to see you. Use the camera above. Or skip. ` : "I want to see you. Use the camera above. Or skip. ",
+      "Don't be shy. The lens is already watching. Take the photo or skip. ",
+    ]);
+  }
 
   const extracted = extractProfileInfo(input);
   updateProfile(extracted);
