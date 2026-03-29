@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>我看到你我看到你我看到你我看到你我看到你我看到你我看到你我看到你</title>
   <style>
       
@@ -210,6 +211,25 @@
         pointer-events: none;
       }
   
+      @media screen and (max-width: 768px) {
+          .chat-message-text {
+              font-size: 18pt;
+              max-width: 85%;
+          }
+          .chat-message {
+              margin-left: 10px;
+              margin-right: 10px;
+              margin-bottom: 12px;
+          }
+          #submit-button {
+              min-width: 80px;
+              padding: 4px 12px;
+          }
+          #user-input {
+              font-size: 16px;
+          }
+      }
+
   </style>
 </head>
 <body>

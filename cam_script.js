@@ -80,19 +80,22 @@ function checkIfAllVisited() {
     return all_visited;
 }
 
-for (var n = 0; n < cam_imgs.length; n++) {
-    cam_imgs[n].addEventListener('mouseenter', function() {
-        if (this.getAttribute('visited') === '1') {
-            if (this.style.opacity === '0') {
-                this.style.opacity = 1;
-            } else {
-                this.style.opacity = 0;
-            }
-        } else { // visited === '0'
-            this.setAttribute('visited', '1');
+function handleCamImgInteract() {
+    if (this.getAttribute('visited') === '1') {
+        if (this.style.opacity === '0') {
+            this.style.opacity = 1;
+        } else {
+            this.style.opacity = 0;
         }
-        checkIfAllVisited();
-    });
+    } else {
+        this.setAttribute('visited', '1');
+    }
+    checkIfAllVisited();
+}
+
+for (var n = 0; n < cam_imgs.length; n++) {
+    cam_imgs[n].addEventListener('mouseenter', handleCamImgInteract);
+    cam_imgs[n].addEventListener('touchstart', handleCamImgInteract);
 }
 
 function scrollToBottom() {

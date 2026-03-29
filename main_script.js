@@ -32,14 +32,17 @@ function pickRandomImage() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function handleImageSwap() {
+  var oldSrc = this.getAttribute('src');
+  var newSrc = pickRandomImage();
+  activeImages.delete(oldSrc);
+  activeImages.add(newSrc);
+  this.setAttribute('src', newSrc);
+}
+
 for (var i = 0; i < images.length; i++) {
-  images[i].addEventListener('mouseover', function() {
-    var oldSrc = this.getAttribute('src');
-    var newSrc = pickRandomImage();
-    activeImages.delete(oldSrc);
-    activeImages.add(newSrc);
-    this.setAttribute('src', newSrc);
-  });
+  images[i].addEventListener('mouseover', handleImageSwap);
+  images[i].addEventListener('touchstart', handleImageSwap);
 }
 
 const gif = document.getElementsByClassName("gifimage")[0];
@@ -50,7 +53,7 @@ const p_content = ["唔好", "Go back to safety", "回頭是安", "Do Not Enter"
                    
 const p_colors = ["#bbd9fa", "#7d3e7c", "#5a569c", "#647571", "#a7d1b2", "#4f354c", "#a5d9a9", "#293752"]
                    
-gif.addEventListener("mouseover", () => {
+function handleGifOver() {
     var rand = Math.floor(Math.random() * p_content.length);
     p.textContent = p_content[rand];
     
@@ -62,7 +65,12 @@ gif.addEventListener("mouseover", () => {
     p.style.transform = 'translate(' + rand_w + 'vw, ' + rand_h + 'vh)';
 
     overlay.style.display = "flex";
-});
-gif.addEventListener("mouseout", () => {
+}
+function handleGifOut() {
     overlay.style.display = "none";
-});
+}
+
+gif.addEventListener("mouseover", handleGifOver);
+gif.addEventListener("touchstart", handleGifOver);
+gif.addEventListener("mouseout", handleGifOut);
+gif.addEventListener("touchend", handleGifOut);

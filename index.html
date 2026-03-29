@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>?咩事?</title>
     <style>
         
@@ -233,6 +234,21 @@
             transform: translate(0vw, 0vh);
         }
     
+        @media screen and (max-width: 768px) {
+            .container {
+                transform: scale(0.55);
+                transform-origin: top left;
+                width: 182vw;
+                height: 182vh;
+            }
+            .gifimage {
+                width: 180px;
+            }
+            .overlay p {
+                font-size: 4em;
+            }
+        }
+
     </style>
 </head>
 <body>
