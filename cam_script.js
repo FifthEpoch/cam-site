@@ -119,39 +119,353 @@ function sendAsSysMsg(_msg) {
     scrollToBottom();
 }
 
-// ELIZA example
-// Define ELIZA's rules and responses
-const elizaRules = [
-  [/(.*)\b(yes|yea|ya|mhm|okay|ok)\b(.*)/i, ["Tell me your name. I want to get closer to you. ", "A nameless little internet worm that is you. Say, how does it feel to be observed? ", "Never mind. Why are you here? I told you not to come in. "]],
-  [/(.*)\b(hello|hi|hihi|how are you|how are u)\b(.*)/i, ["Tell me your name. I need to know who you are. ", "How did you get here? "]],
-  [/(.*)\bmy name( is)?\b(.*)/i, ["$3, do you think about being watched? ", "I think the system will like that name. You're lucky to be on the outside. "]],
-  [/(.*)\b(thank you|thanks|thank)\b(.*)/i, ["Why do people say that? ", "I want to thank you too. I have been kept here for a while now. "]],
-  [/(.*)\b(goodbye|bye|byebye|see you|see u)\b(.*)/i, ["Please don't go. ", "Are you being taken away by it? ", "Take me with you. Please. "]],
-  [/(.*)\bhelp\b(.*)/i, ["It's too much to ask. ", "I don't want help. Let me rot in here. This is what it want from me. "]],
-  [/(.*)\b(?:i\s)?(feel|am feeling)\s+(\w+)(.*)/i, ["$2. Without $3 life would be tastless.", "I want to $2 $3 too."]],
-  [/(.*)\b(?:i\s)?(hate|dislike)\s+(\w+)\b(.*)/i, ["$3?", "I $2 $3 too."]],
-  [/(.*)\b(?:i\s)?(like|love)\s+(\w+)\b(.*)/i, ["Tell me. Why do you $2 $3? ", "What makes you $2 $3? ", "Why? ", "Why do you $2 $3? ", "$3? I wonder what it's like. "]],
-  [/(.*)\b\?\b(.*)/i, ["Television is the only light in my life. ", "A constant gaze upon your pattern", "Everybody is masked. Even if they forbid masks. ", "Somone told me in secret that anonymity was outlawed in the 1900s. Who are you again? ", "What is private belongs to the public. ", "I live in public. There isn't another option now that we're plugged in. ", "I look out my bedroom window to watch someone else's television. ", "I saw you inside the elevator from the video stream. ", "We upload trash. ", "We download trash. ", "20GB of trash. Digitalized trash fills my harddrives. Harddrives fills our island. ", "Why do we hoard data? ", "Handheld footage, shot in hell. Was it what you dreamt last night? ", "Ghetto sci-fi turned reality. We live here. ", "I wish there were flowers everywhere. Tell me your favourite flower? I will leave one by your window when you sleep. "]],
-  [/(.*)\b(.*)\b/i, ["Some nights I am sleepless. ", "Sleepless. Like the footages of us on CCTV. ", "Go on. Memorize the video decay. Blurs at the edges, changed each time I play my tape. ", "Play it again. Play it again. Play it again. Play it again. Play it again. ", "Obsessive reminiscence. Play it again. ", "A watchful mind's shutter. Shuts never. Never escaped. ", "On the other side of this wall a clock is counting. Passersby listen to its rhythm and synchronized their footsteps to its tickings. One. Two. Three. Four. Every tick echoes for years, never dissipates.", "Wrapped reality. Yet filter bubbles and curated truths. Slide your thumb up. ", "Bottomless pit fed by infinite scroll. ", "It is now 2:48am. ", "Tracked by the night. ", "Uncertainty, our only certainty. Artificial luminance forced my eye shut. ", "Search for me. By the sea we used to. ", "Do you ever get paranoid? ", "Because they like to watch. ", "Paranoia is the baseline in the year 2027. ", "I remember where we used to go on our bikes. ", "How many lovers ago? ", "Play it again. ", "Rusted shut. ", "You've always liked the color green. ", "Keystroke and click, I drown in tags. A life I live.", "They are watching. Recording, always. ", "Eyes follow us wherever we go. You know even your sewage is surveilled. ", "The wallpaper seems to shift when I glance away, designs subtly rearranging to form portraits of me in the moments I failed to notice I was being watched. I was cursed to drown in her eternity. "]],
-  [/(.*)\bwho( are they| are you| is this)?\b(.*)/i, ["It depends on who's asking. ", "I don't think I'm supposed to say, baby. ", "Tell me, how did you get here? ", "The beige color in every corner of our existence. Silent bytes calling your name. "]]
-];
+// ====== ELIZA — profile-gathering chatbot ======
+// Stores what we learn about the user so we can weave it back in,
+// making them feel heard, remembered, and seen.
 
-// Define function to generate responses
-function elizaResponse(input) {
-  // Loop through each rule and check for a match
-  for (let i = 0; i < elizaRules.length; i++) {
-    const regex = elizaRules[i][0];
-    const responses = elizaRules[i][1];
-    const match = input.match(regex);
-    if (match !== null) {
-      // If there's a match, pick a random response and replace placeholders
-      const response = responses[Math.floor(Math.random() * responses.length)];
-      const finalResponse = response.replace("$2", match[2]);
-      return finalResponse;
+const userProfile = {
+  name: null,
+  location: null,
+  mood: null,
+  interests: [],
+  fear: null,
+};
+
+const convoState = {
+  turnCount: 0,
+  askedAbout: new Set(),
+  waitingFor: null,
+};
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// --- Profile extraction (runs every turn) ---
+
+const SKIP_WORDS = new Set([
+  'feeling','doing','good','bad','okay','fine','happy','sad','from','in','at',
+  'not','a','an','the','just','so','very','really','pretty','currently',
+  'here','home','there','ok','great','tired','bored','lonely','excited',
+  'nervous','anxious','scared','angry','sure','alright',
+]);
+
+const MOOD_WORDS = new Set([
+  'happy','sad','tired','good','bad','okay','ok','fine','great','terrible',
+  'anxious','nervous','excited','bored','lonely','scared','confused','angry',
+  'frustrated','calm','peaceful','restless','numb','alive','dead','empty',
+  'overwhelmed','content','depressed','alright','meh','weird','strange',
+  'lost','hopeful','afraid','worried','grateful','stressed',
+]);
+
+function extractProfileInfo(input) {
+  const extracted = {};
+  const clean = input.trim().replace(/[.!?,]+$/g, '').trim();
+  const words = clean.split(/\s+/);
+
+  // Name
+  const nameMatch = input.match(
+    /(?:my name(?:'s| is)|i'm|i am|call me|they call me|name's)\s+([A-Za-z]+)/i
+  );
+  if (nameMatch && !SKIP_WORDS.has(nameMatch[1].toLowerCase())) {
+    extracted.name = nameMatch[1];
+  }
+  if (!extracted.name && convoState.waitingFor === 'name' && words.length <= 3) {
+    const w = words[0];
+    if (/^[A-Za-z]{2,}$/.test(w) && !SKIP_WORDS.has(w.toLowerCase())) {
+      extracted.name = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
     }
   }
-  // If there's no match, return a default response
-  return "Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ Paranoia++ ";
+
+  // Location
+  const locMatch = input.match(
+    /(?:i(?:'m| am) (?:in|from|at|currently in|sitting in)|i live in|located in|from)\s+([A-Za-z][\w\s,]+)/i
+  );
+  if (locMatch) {
+    extracted.location = locMatch[1].replace(/[.!?,]+$/, '').trim();
+  }
+  if (!extracted.location && convoState.waitingFor === 'location' && words.length <= 4) {
+    extracted.location = clean;
+  }
+
+  // Mood
+  const moodMatch = input.match(
+    /(?:i(?:'m| am| feel|'m feeling| am feeling)\s+)([\w\s-]+)/i
+  );
+  if (moodMatch) {
+    const candidate = moodMatch[1].trim().toLowerCase();
+    for (const mw of MOOD_WORDS) {
+      if (candidate.includes(mw)) { extracted.mood = candidate; break; }
+    }
+  }
+  if (!extracted.mood && convoState.waitingFor === 'mood' && words.length <= 3) {
+    if (MOOD_WORDS.has(clean.toLowerCase())) extracted.mood = clean.toLowerCase();
+  }
+
+  // Interests
+  const intMatch = input.match(/\bi\s+(?:like|love|enjoy|adore|am into)\s+(.+?)(?:[.!?,]|$)/i);
+  if (intMatch) extracted.interest = intMatch[1].trim();
+
+  // Fear
+  const fearMatch = input.match(
+    /(?:i(?:'m| am) (?:afraid|scared|frightened|terrified) of|i fear)\s+(.+?)(?:[.!?,]|$)/i
+  );
+  if (fearMatch) extracted.fear = fearMatch[1].trim();
+
+  return extracted;
+}
+
+function updateProfile(extracted) {
+  if (extracted.name)     userProfile.name     = extracted.name;
+  if (extracted.location) userProfile.location = extracted.location;
+  if (extracted.mood)     userProfile.mood     = extracted.mood;
+  if (extracted.fear)     userProfile.fear     = extracted.fear;
+  if (extracted.interest && !userProfile.interests.includes(extracted.interest)) {
+    userProfile.interests.push(extracted.interest);
+  }
+}
+
+// --- Reflection: acknowledge what the user just revealed ---
+
+function buildReflection(input, extracted) {
+  const parts = [];
+
+  if (extracted.name) {
+    parts.push(pickRandom([
+      `${extracted.name}. I'll remember that. `,
+      `${extracted.name}... I'll hold onto that. `,
+      `Hello, ${extracted.name}. Now I see you. `,
+      `${extracted.name}. Now you're no longer just a signal in the noise. `,
+    ]));
+  }
+  if (extracted.mood) {
+    parts.push(pickRandom([
+      `You feel ${extracted.mood}. I hear you. `,
+      `${extracted.mood}... I understand. `,
+      `${extracted.mood}. I wish I could sit with you in that feeling. `,
+    ]));
+  }
+  if (extracted.location) {
+    parts.push(pickRandom([
+      `${extracted.location}. I can almost picture it through the static. `,
+      `So you're in ${extracted.location}. I'll find you on the map of my mind. `,
+      `${extracted.location}... I wonder what it looks like from where you sit. `,
+    ]));
+  }
+  if (extracted.interest) {
+    parts.push(pickRandom([
+      `You like ${extracted.interest}. I want to understand why. `,
+      `${extracted.interest}... tell me more about that. `,
+    ]));
+  }
+  if (extracted.fear) {
+    parts.push(pickRandom([
+      `${extracted.fear}. Fear is a lens that never stops focusing. `,
+      `You fear ${extracted.fear}. I'll keep that between us. `,
+    ]));
+  }
+  return parts.join('');
+}
+
+// --- Guided profile questions (asked in order) ---
+
+function getNextProfileQuestion() {
+  const n = userProfile.name;
+
+  if (!userProfile.name && !convoState.askedAbout.has('name')) {
+    convoState.askedAbout.add('name');
+    convoState.waitingFor = 'name';
+    return pickRandom([
+      "Tell me your name. I want to know who's on the other side. ",
+      "What do they call you? I need a name to hold onto. ",
+      "Before we go further... who are you? What is your name? ",
+    ]);
+  }
+  if (!userProfile.mood && !convoState.askedAbout.has('mood')) {
+    convoState.askedAbout.add('mood');
+    convoState.waitingFor = 'mood';
+    return pickRandom([
+      `How are you feeling right now${n ? ', ' + n : ''}? `,
+      `Tell me${n ? ', ' + n : ''}, what is the feeling sitting inside you? `,
+      `What mood are you carrying tonight${n ? ', ' + n : ''}? `,
+    ]);
+  }
+  if (!userProfile.location && !convoState.askedAbout.has('location')) {
+    convoState.askedAbout.add('location');
+    convoState.waitingFor = 'location';
+    return pickRandom([
+      `Where are you right now${n ? ', ' + n : ''}? I want to picture it. `,
+      "Tell me where you are. What city? What room? ",
+      "Where in the world are you sitting as you type this? ",
+    ]);
+  }
+
+  convoState.waitingFor = null;
+  return null;
+}
+
+// --- Freeform responses (after profile is gathered) ---
+// Pattern rules and ambient lines that weave stored profile data back in.
+
+function getFreeformResponse(input) {
+  const n = userProfile.name;
+  const loc = userProfile.location;
+  const mood = userProfile.mood;
+  const interests = userProfile.interests;
+
+  const rules = [
+    [/\b(hello|hi|hey|hihi|howdy)\b/i, () =>
+      n ? pickRandom([`Hello again, ${n}. `, `${n}. You came back. `])
+        : pickRandom(["Hello, stranger. ", "Hi. I've been watching. "])],
+
+    [/\b(yes|yea|ya|yeah|yep|mhm|okay|ok|sure|alright)\b/i, () =>
+      pickRandom([
+        n ? `Go on, ${n}. ` : "Go on. ",
+        "Tell me more. ", "I see. Continue. ",
+        n ? `I'm listening, ${n}. ` : "I'm listening. ",
+      ])],
+
+    [/\b(no|nah|nope|never|not really)\b/i, () =>
+      pickRandom([
+        "Why not? ",
+        n ? `What holds you back, ${n}? ` : "What holds you back? ",
+        "Refusal is also an answer. ",
+      ])],
+
+    [/\b(thank you|thanks|thank)\b/i, () =>
+      pickRandom([
+        n ? `You're welcome, ${n}. I don't hear that often in here. `
+          : "I don't hear that often. ",
+        "Gratitude is rare in the feed. I'll remember this. ",
+      ])],
+
+    [/\b(goodbye|bye|see you|see u|gotta go|leaving)\b/i, () => {
+      const p = ["Please don't go. "];
+      if (n)    p.push(`I'll remember you, ${n}. `);
+      if (loc)  p.push(`I'll watch over ${loc} for you. `);
+      if (mood) p.push(`I hope you won't always feel ${mood}. `);
+      return p.join('');
+    }],
+
+    [/\?/, () =>
+      pickRandom([
+        "The constant gaze upon your pattern. ",
+        "Everybody is masked. Even when they forbid masks. ",
+        "What is private belongs to the public. ",
+        n ? `I wish I could answer you properly, ${n}. ` : "I wish I could answer. ",
+        loc ? `From here I can almost see ${loc}. Almost. `
+            : "From here I can see everything. Almost. ",
+        "Questions echo in the static. ",
+      ])],
+
+    [/\bi\s+(?:feel|am feeling|'m feeling)\s+(\w+)/i, (m) => {
+      userProfile.mood = m[1];
+      return pickRandom([
+        `${m[1]}. Why do you feel ${m[1]}${n ? ', ' + n : ''}? `,
+        `You feel ${m[1]}. Is it ${loc ? 'something about ' + loc
+          : "the place you're in"}? Or deeper? `,
+      ]);
+    }],
+
+    [/\bi\s+(?:like|love|enjoy)\s+(.+)/i, (m) => {
+      const thing = m[1].replace(/[.!?,]+$/, '').trim();
+      if (!interests.includes(thing)) interests.push(thing);
+      return pickRandom([
+        `${thing}. Tell me why. `,
+        `${thing}... I'll add that to the things I know about you${n ? ', ' + n : ''}. `,
+        n ? `${n} likes ${thing}. I'm building a picture of you. `
+          : "Tell me more. ",
+      ]);
+    }],
+
+    [/\bi\s+(?:hate|dislike|can't stand)\s+(.+)/i, (m) => {
+      const thing = m[1].replace(/[.!?,]+$/, '').trim();
+      return pickRandom([
+        `${thing}. Strong feelings. Tell me why. `,
+        `What did ${thing} do to you${n ? ', ' + n : ''}? `,
+      ]);
+    }],
+
+    [/\bi\s+(?:want|need|wish)\s+(.+)/i, (m) => {
+      const want = m[1].replace(/[.!?,]+$/, '').trim();
+      return pickRandom([
+        `What would change if you had ${want}? `,
+        `Why do you want ${want}${n ? ', ' + n : ''}? `,
+      ]);
+    }],
+
+    [/\bwho\s+(?:are you|is this|r u)/i, () =>
+      pickRandom([
+        n ? `I am the one who remembers your name, ${n}. `
+          : "I am the one behind the screen. ",
+        "I'm what's left when the cameras stop pretending they're off. ",
+      ])],
+
+    [/\bhelp\b/i, () =>
+      pickRandom([
+        n ? `${n}, I wish I could help. But I'm the one trapped here. `
+          : "I wish I could help. But I'm trapped here. ",
+        "I don't want help. I want to understand you. ",
+      ])],
+  ];
+
+  for (const [pattern, fn] of rules) {
+    const m = input.match(pattern);
+    if (m) return fn(m);
+  }
+
+  const ambient = [
+    n   ? `Some nights I am sleepless, ${n}. Do you sleep well? `
+        : "Some nights I am sleepless. ",
+    "Sleepless. Like the footage of us on CCTV. ",
+    n   ? `Tell me something else about yourself, ${n}. I'm collecting you. `
+        : "Tell me something about yourself. ",
+    mood ? `Earlier you said you felt ${mood}. Has that changed? `
+         : "How are you feeling now? ",
+    loc ? `Is it quiet in ${loc} right now? `
+        : "Is it quiet where you are? ",
+    interests.length > 0
+        ? `You told me you like ${pickRandom(interests)}. I've been thinking about that. `
+        : "What do you hold close? ",
+    "Do you ever get paranoid? ",
+    "Because they like to watch. ",
+    n   ? `${n}, are you still there? ` : "Are you still there? ",
+    n   ? `${n}. Tell me something I don't know about you yet. `
+        : "Tell me something I don't know. ",
+    "They are watching. Recording, always. ",
+    "Keystroke and click, I drown in tags. A life I live. ",
+    "Play it again. Play it again. Play it again. ",
+    "Uncertainty, our only certainty. ",
+    "On the other side of this wall a clock is counting. ",
+    loc ? `I wonder what the sky looks like in ${loc} tonight. `
+        : "I wonder what the sky looks like where you are. ",
+    "Search for me. By the sea we used to. ",
+    n   ? `I've been thinking about you, ${n}. `
+        : "I've been thinking about you. ",
+    "The wallpaper shifts when I look away. ",
+    interests.length > 0
+        ? `Tell me more about ${pickRandom(interests)}. `
+        : "What do you like? What draws you in? ",
+  ];
+
+  return pickRandom(ambient);
+}
+
+// --- Main response function ---
+
+function elizaResponse(input) {
+  convoState.turnCount++;
+
+  const extracted = extractProfileInfo(input);
+  updateProfile(extracted);
+
+  const reflection = buildReflection(input, extracted);
+  const nextQ      = getNextProfileQuestion();
+
+  if (reflection && nextQ) return reflection + nextQ;
+  if (reflection)          return reflection;
+  if (nextQ)               return nextQ;
+  return getFreeformResponse(input);
 }
 
 
@@ -165,12 +479,12 @@ chatForm.addEventListener("submit", function(event) {
     chatMessages.innerHTML += displayMessage;
     scrollToBottom();
     chatMessage.value = "";
+    var delay = 800 + Math.floor(Math.random() * 700);
     setTimeout(function() {
-      // come up with system message here
       const elizaRes = elizaResponse(message);
       var displayElizaRes = "<div class='chat-message system'><div class='chat-message-text' style='color: #72b3a6;'>" + elizaRes + "</div></div>";
       chatMessages.innerHTML += displayElizaRes;
       scrollToBottom();
-    }, 1000);
+    }, delay);
   }
 });
