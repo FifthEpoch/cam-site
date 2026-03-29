@@ -47,6 +47,16 @@ function handleImageSwap() {
   activeImages.add(newSrc);
   this.setAttribute('src', newSrc);
   randomizePosition(this);
+
+  var num = parseInt(newSrc.match(/img(\d+)/)[1], 10);
+  if (num <= 64) {
+    var size = Math.floor(Math.random() * 80) + 60;
+    this.style.width = size + 'px';
+    this.style.height = 'auto';
+  } else {
+    this.style.width = '';
+    this.style.height = '';
+  }
 }
 
 for (var i = 0; i < images.length; i++) {
