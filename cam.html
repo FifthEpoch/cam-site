@@ -120,25 +120,63 @@
         width: 100vw;
         height: 50px;
         pointer-events: auto;
+        display: flex;
+        align-items: center;
+        padding: 4px 5px;
+        background: #c0c0c0;
+        border-top: 2px solid #fff;
+        border-left: 2px solid #fff;
+        border-bottom: 2px solid #404040;
+        border-right: 2px solid #404040;
+        box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080;
       }
   
       #user-input {
-        height: 40px;
-        width: 60%;
-        font-size: 16px;
-        margin-left: 5px;
-        padding: 8px;
+        height: 32px;
+        flex: 1;
+        font-family: 'Courier New', 'Fixedsys', monospace;
+        font-size: 14px;
+        padding: 4px 6px;
         box-sizing: border-box;
+        background: #fff;
+        color: #000;
+        border-top: 2px solid #404040;
+        border-left: 2px solid #404040;
+        border-bottom: 2px solid #fff;
+        border-right: 2px solid #fff;
+        box-shadow: inset 1px 1px 0 #808080;
+        outline: none;
       }
+
       #submit-button {
-        height: 40px;
-        font-size: 16px;
-        padding: 8px 16px;
+        height: 32px;
+        font-family: 'Courier New', 'Fixedsys', monospace;
+        font-size: 13px;
+        padding: 4px 16px;
+        margin-left: 4px;
         cursor: pointer;
+        background: #c0c0c0;
+        color: #000;
+        border-top: 2px solid #fff;
+        border-left: 2px solid #fff;
+        border-bottom: 2px solid #404040;
+        border-right: 2px solid #404040;
+        box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080;
+        text-transform: uppercase;
+        letter-spacing: 1px;
       }
-  
+
       #submit-button:hover {
-        background-color: #0062cc;
+        background: #d4d4d4;
+      }
+
+      #submit-button:active {
+        border-top: 2px solid #404040;
+        border-left: 2px solid #404040;
+        border-bottom: 2px solid #fff;
+        border-right: 2px solid #fff;
+        box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #dfdfdf;
+        padding: 5px 15px 3px 17px;
       }
       
       .chat-message {
@@ -177,7 +215,7 @@
     
     <div class="container">
         <div class="row"></div>
-        <div id="chat-window" style="display: none;">
+        <div id="chat-window">
           <div id="chat-messages"></div>
           <form id="chat-form">
             <input type="text" id="user-input" placeholder="Be kind and respond to her. She is lonely. ">

@@ -91,13 +91,7 @@ for (var n = 0; n < cam_imgs.length; n++) {
         } else { // visited === '0'
             this.setAttribute('visited', '1');
         }
-        var all_visited = checkIfAllVisited();
-        if (all_visited && chatWindow.style.display === 'none') {
-            console.log("ALL VISITED!");
-            // show chat <div id="chat-window" style="display: none;">
-            chatWindow.style.display = 'block';
-            sendAsSysMsg('Are you online?');
-        }
+        checkIfAllVisited();
     });
 }
 
@@ -118,6 +112,8 @@ function sendAsSysMsg(_msg) {
     chatMessages.innerHTML += displaySystemMessage;
     scrollToBottom();
 }
+
+sendAsSysMsg('Are you online?');
 
 // ====== ELIZA — profile-gathering chatbot ======
 // Stores what we learn about the user so we can weave it back in,
