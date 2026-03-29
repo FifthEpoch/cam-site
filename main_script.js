@@ -1,16 +1,16 @@
 const images = document.getElementsByClassName('image');
 
 const imgPool = [];
-for (let i = 0; i <= 79; i++) {
+const pngOverrides = new Set([70,80,81,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98]);
+for (let i = 0; i <= 98; i++) {
+  if (i === 82) continue;
   const num = i.toString().padStart(2, '0');
-  imgPool.push('img/main/img' + num + '.jpg');
+  const ext = pngOverrides.has(i) ? '.png' : '.jpg';
+  imgPool.push('img/main/img' + num + ext);
 }
-[80,81,83,84,85,86,87,88,89,90,91,92,93].forEach(function(i) {
-  imgPool.push('img/main/img' + i + '.png');
-});
 
 const preferred = new Set();
-for (let i = 65; i <= 93; i++) preferred.add(i);
+for (let i = 65; i <= 98; i++) preferred.add(i);
 
 const activeImages = new Set();
 for (var k = 0; k < images.length; k++) {
