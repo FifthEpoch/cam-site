@@ -1,8 +1,8 @@
 const images = document.getElementsByClassName('image');
 
 const imgPool = [];
-const pngOverrides = new Set([70,80,81,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99]);
-for (let i = 0; i <= 99; i++) {
+const pngOverrides = new Set([70,80,81,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100]);
+for (let i = 0; i <= 100; i++) {
   if (i === 82) continue;
   const num = i.toString().padStart(2, '0');
   const ext = pngOverrides.has(i) ? '.png' : '.jpg';
@@ -10,7 +10,7 @@ for (let i = 0; i <= 99; i++) {
 }
 
 const preferred = new Set();
-for (let i = 65; i <= 99; i++) preferred.add(i);
+for (let i = 65; i <= 100; i++) preferred.add(i);
 
 const activeImages = new Set();
 for (var k = 0; k < images.length; k++) {
@@ -54,15 +54,39 @@ function handleImageSwap() {
     this.style.width = size + 'px';
     this.style.height = 'auto';
   } else {
-    var size = Math.floor(Math.random() * 300) + 200;
+    var size = Math.floor(Math.random() * 350) + 300;
     this.style.width = size + 'px';
     this.style.height = 'auto';
   }
 }
 
-for (var i = 0; i < images.length; i++) {
-  images[i].addEventListener('mouseover', handleImageSwap);
-  images[i].addEventListener('touchstart', handleImageSwap);
+// Populate the screen with extra images on load
+var container = document.querySelector('.container');
+var extraCount = 20;
+for (var e = 0; e < extraCount; e++) {
+  var src = pickRandomImage();
+  activeImages.add(src);
+  var img = document.createElement('img');
+  img.className = 'image';
+  img.src = src;
+  img.style.position = 'absolute';
+  img.style.top = '0';
+  img.style.left = '0';
+  var num = parseInt(src.match(/img(\d+)/)[1], 10);
+  if (num <= 64) {
+    img.style.width = (Math.floor(Math.random() * 80) + 60) + 'px';
+  } else {
+    img.style.width = (Math.floor(Math.random() * 350) + 300) + 'px';
+  }
+  img.style.height = 'auto';
+  randomizePosition(img);
+  container.insertBefore(img, container.firstChild);
+}
+
+var allImages = document.getElementsByClassName('image');
+for (var i = 0; i < allImages.length; i++) {
+  allImages[i].addEventListener('mouseover', handleImageSwap);
+  allImages[i].addEventListener('touchstart', handleImageSwap);
 }
 
 const gif = document.getElementsByClassName("gifimage")[0];
