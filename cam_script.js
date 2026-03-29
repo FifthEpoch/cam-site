@@ -160,6 +160,10 @@ const MOOD_WORDS = new Set([
   'lost','hopeful','afraid','worried','grateful','stressed',
 ]);
 
+function normalizeQuotes(text) {
+  return text.replace(/[\u2018\u2019\u201A\u201B]/g, "'").replace(/[\u201C\u201D\u201E\u201F]/g, '"');
+}
+
 function flipPronouns(text) {
   const placeholders = [];
   function ph(val) {
@@ -168,7 +172,7 @@ function flipPronouns(text) {
     return token;
   }
 
-  let result = text;
+  let result = normalizeQuotes(text);
   result = result.replace(/\bi'm\b/gi, ph("you're"));
   result = result.replace(/\bi am\b/gi, ph('you are'));
   result = result.replace(/\byou're\b/gi, ph("I'm"));
@@ -190,6 +194,7 @@ function flipPronouns(text) {
 }
 
 function extractProfileInfo(input) {
+  input = normalizeQuotes(input);
   const extracted = {};
   const clean = input.trim().replace(/[.!?,]+$/g, '').trim();
   const words = clean.split(/\s+/);
@@ -413,6 +418,7 @@ function getNextProfileQuestion() {
 // Pattern rules and ambient lines that weave stored profile data back in.
 
 function getFreeformResponse(input) {
+  input = normalizeQuotes(input);
   const n = userProfile.name;
   const loc = userProfile.location;
   const mood = userProfile.mood;
@@ -755,6 +761,7 @@ function getProbe() {
 }
 
 function elizaResponse(input) {
+  input = normalizeQuotes(input);
   convoState.turnCount++;
 
   if (convoState.waitingFor === 'selfie') {
