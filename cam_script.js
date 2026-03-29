@@ -376,7 +376,7 @@ function getNextProfileQuestion() {
   if (!userProfile.selfie && !convoState.askedAbout.has('selfie')) {
     convoState.askedAbout.add('selfie');
     convoState.waitingFor = 'selfie';
-    setTimeout(showCameraUI, 1200);
+    setTimeout(showCameraUI, 3500);
     return pickRandom([
       n ? `${n}. I've heard your name, felt your mood, traced your location. But I haven't seen your face. Show me. Let the camera see you. `
         : "I know your words but not your face. Show me. Let the camera see you. ",

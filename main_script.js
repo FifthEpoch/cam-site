@@ -1,8 +1,8 @@
 const images = document.getElementsByClassName('image');
 
 const imgPool = [];
-const pngOverrides = new Set([70,80,81,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98]);
-for (let i = 0; i <= 98; i++) {
+const pngOverrides = new Set([70,80,81,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99]);
+for (let i = 0; i <= 99; i++) {
   if (i === 82) continue;
   const num = i.toString().padStart(2, '0');
   const ext = pngOverrides.has(i) ? '.png' : '.jpg';
@@ -10,7 +10,7 @@ for (let i = 0; i <= 98; i++) {
 }
 
 const preferred = new Set();
-for (let i = 65; i <= 98; i++) preferred.add(i);
+for (let i = 65; i <= 99; i++) preferred.add(i);
 
 const activeImages = new Set();
 for (var k = 0; k < images.length; k++) {
