@@ -32,12 +32,21 @@ function pickRandomImage() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function randomizePosition(el) {
+  var x = Math.floor(Math.random() * 110) - 15;
+  var y = Math.floor(Math.random() * 100) - 10;
+  var z = Math.floor(Math.random() * 20) + 1;
+  el.style.transform = 'translate(' + x + 'vw, ' + y + 'vh)';
+  el.style.zIndex = z;
+}
+
 function handleImageSwap() {
   var oldSrc = this.getAttribute('src');
   var newSrc = pickRandomImage();
   activeImages.delete(oldSrc);
   activeImages.add(newSrc);
   this.setAttribute('src', newSrc);
+  randomizePosition(this);
 }
 
 for (var i = 0; i < images.length; i++) {
@@ -74,3 +83,82 @@ gif.addEventListener("mouseover", handleGifOver);
 gif.addEventListener("touchstart", handleGifOver);
 gif.addEventListener("mouseout", handleGifOut);
 gif.addEventListener("touchend", handleGifOut);
+
+// --- Gyroscope marble (mobile only) ---
+
+if ('ontouchstart' in window) {
+  var marble = document.createElement('div');
+  marble.style.cssText = 'position:fixed;width:30px;height:30px;border-radius:50%;' +
+    'background:radial-gradient(circle at 40% 35%, rgba(255,255,255,0.9), rgba(180,160,255,0.6), rgba(100,80,200,0.3));' +
+    'box-shadow:0 0 12px 4px rgba(160,140,255,0.5);pointer-events:none;z-index:99999;' +
+    'top:0;left:0;will-change:transform;';
+  document.body.appendChild(marble);
+
+  var mx = window.innerWidth / 2;
+  var my = window.innerHeight / 2;
+  var vx = 0;
+  var vy = 0;
+  var friction = 0.92;
+  var sensitivity = 0.4;
+  var gyroActive = false;
+  var lastTriggered = new Map();
+  var DEBOUNCE_MS = 500;
+
+  function onOrientation(e) {
+    if (e.gamma === null || e.beta === null) return;
+    gyroActive = true;
+    vx += e.gamma * sensitivity;
+    vy += (e.beta - 30) * sensitivity;
+  }
+
+  function startGyro() {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(function(state) {
+        if (state === 'granted') {
+          window.addEventListener('deviceorientation', onOrientation);
+        }
+      }).catch(function() {});
+    } else {
+      window.addEventListener('deviceorientation', onOrientation);
+    }
+  }
+
+  document.addEventListener('touchstart', function initGyro() {
+    startGyro();
+    document.removeEventListener('touchstart', initGyro);
+  }, { once: true });
+
+  function marbleTick() {
+    vx *= friction;
+    vy *= friction;
+    mx += vx;
+    my += vy;
+
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    if (mx < 0)  { mx = 0;  vx = Math.abs(vx) * 0.5; }
+    if (mx > w)  { mx = w;  vx = -Math.abs(vx) * 0.5; }
+    if (my < 0)  { my = 0;  vy = Math.abs(vy) * 0.5; }
+    if (my > h)  { my = h;  vy = -Math.abs(vy) * 0.5; }
+
+    marble.style.transform = 'translate(' + (mx - 15) + 'px, ' + (my - 15) + 'px)';
+
+    if (gyroActive) {
+      marble.style.display = 'block';
+      var hit = document.elementFromPoint(mx, my);
+      if (hit && hit.classList && hit.classList.contains('image')) {
+        var now = Date.now();
+        var last = lastTriggered.get(hit) || 0;
+        if (now - last > DEBOUNCE_MS) {
+          lastTriggered.set(hit, now);
+          handleImageSwap.call(hit);
+        }
+      }
+    }
+
+    requestAnimationFrame(marbleTick);
+  }
+
+  requestAnimationFrame(marbleTick);
+}
