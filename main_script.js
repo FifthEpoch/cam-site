@@ -1,13 +1,45 @@
 const images = document.getElementsByClassName('image');
 
+const imgPool = [];
+for (let i = 0; i <= 79; i++) {
+  const num = i.toString().padStart(2, '0');
+  imgPool.push('img/main/img' + num + '.jpg');
+}
+[80,81,83,84,85,86,87,88,89,90,91,92,93].forEach(function(i) {
+  imgPool.push('img/main/img' + i + '.png');
+});
+
+const preferred = new Set();
+for (let i = 65; i <= 93; i++) preferred.add(i);
+
+const activeImages = new Set();
+for (var k = 0; k < images.length; k++) {
+  activeImages.add(images[k].getAttribute('src'));
+}
+
+function pickRandomImage() {
+  var usePreferred = Math.random() < 0.7;
+  var pool = usePreferred
+    ? imgPool.filter(function(p) {
+        var num = parseInt(p.match(/img(\d+)/)[1], 10);
+        return preferred.has(num) && !activeImages.has(p);
+      })
+    : imgPool.filter(function(p) { return !activeImages.has(p); });
+  if (pool.length === 0) {
+    pool = imgPool.filter(function(p) { return !activeImages.has(p); });
+  }
+  if (pool.length === 0) pool = imgPool;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 for (var i = 0; i < images.length; i++) {
-	images[i].addEventListener('mouseover', function() {
-        var rand = Math.floor(Math.random() * 80);
-        var paddednum = rand.toString().padStart(2, '0');
-		this.setAttribute('src', 'img/main/img'+paddednum+'.jpg');
-        console.log(paddednum)
-        console.log('img' + paddednum + '.jpg')
-	});
+  images[i].addEventListener('mouseover', function() {
+    var oldSrc = this.getAttribute('src');
+    var newSrc = pickRandomImage();
+    activeImages.delete(oldSrc);
+    activeImages.add(newSrc);
+    this.setAttribute('src', newSrc);
+  });
 }
 
 const gif = document.getElementsByClassName("gifimage")[0];

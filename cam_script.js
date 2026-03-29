@@ -125,6 +125,8 @@ const userProfile = {
   mood: null,
   interests: [],
   fear: null,
+  occupation: null,
+  doing: null,
 };
 
 const convoState = {
@@ -222,14 +224,43 @@ function extractProfileInfo(input) {
   );
   if (fearMatch) extracted.fear = flipPronouns(fearMatch[1].trim());
 
+  // Occupation
+  const occMatch = input.match(
+    /(?:i(?:'m| am) an?\s+|i work (?:as|in|at|for)\s+|my (?:job|work) is\s+|i do\s+)(.+?)(?:[.!?,]|$)/i
+  );
+  if (occMatch) {
+    const occ = occMatch[1].trim().toLowerCase();
+    if (!SKIP_WORDS.has(occ) && !MOOD_WORDS.has(occ) && occ.length > 2) {
+      extracted.occupation = flipPronouns(occ);
+    }
+  }
+  if (!extracted.occupation && convoState.waitingFor === 'occupation' && words.length <= 4) {
+    if (!MOOD_WORDS.has(clean.toLowerCase())) {
+      extracted.occupation = flipPronouns(clean);
+    }
+  }
+
+  // What they're doing right now
+  const doingMatch = input.match(
+    /(?:i(?:'m| am) (?:just |currently )?(?:doing|watching|reading|playing|listening|working|browsing|cooking|drinking|eating|writing|drawing|coding|studying|thinking))\s*(.*)$/i
+  );
+  if (doingMatch) {
+    extracted.doing = flipPronouns(input.match(/i(?:'m| am)\s+(.*)/i)[1].replace(/[.!?,]+$/, '').trim());
+  }
+  if (!extracted.doing && convoState.waitingFor === 'doing' && words.length <= 6) {
+    extracted.doing = flipPronouns(clean);
+  }
+
   return extracted;
 }
 
 function updateProfile(extracted) {
-  if (extracted.name)     userProfile.name     = extracted.name;
-  if (extracted.location) userProfile.location = extracted.location;
-  if (extracted.mood)     userProfile.mood     = extracted.mood;
-  if (extracted.fear)     userProfile.fear     = extracted.fear;
+  if (extracted.name)       userProfile.name       = extracted.name;
+  if (extracted.location)   userProfile.location   = extracted.location;
+  if (extracted.mood)       userProfile.mood       = extracted.mood;
+  if (extracted.fear)       userProfile.fear        = extracted.fear;
+  if (extracted.occupation) userProfile.occupation = extracted.occupation;
+  if (extracted.doing)      userProfile.doing      = extracted.doing;
   if (extracted.interest && !userProfile.interests.includes(extracted.interest)) {
     userProfile.interests.push(extracted.interest);
   }
@@ -276,6 +307,18 @@ function buildReflection(input, extracted) {
       `${extracted.fear}. The cameras have a word for that. I don't remember it anymore. `,
     ]));
   }
+  if (extracted.occupation) {
+    parts.push(pickRandom([
+      `${extracted.occupation}. So that's what they make you do out there. The footage makes more sense now. `,
+      `${extracted.occupation}... I filed that. Another piece of you I can hold against the static. `,
+    ]));
+  }
+  if (extracted.doing) {
+    parts.push(pickRandom([
+      `${extracted.doing}. I can picture it through the webcam glare. `,
+      `${extracted.doing}... the timestamp is logged. I know exactly when you said this. `,
+    ]));
+  }
   return parts.join('');
 }
 
@@ -309,6 +352,24 @@ function getNextProfileQuestion() {
       `I saw you inside the elevator from the video stream${n ? ', ' + n : ''}. Where are you now? `,
       "I look out my window and see someone else's television. Where are you looking from? ",
       `Where in the world is your screen glowing right now${n ? ', ' + n : ''}? `,
+    ]);
+  }
+  if (!userProfile.doing && !convoState.askedAbout.has('doing')) {
+    convoState.askedAbout.add('doing');
+    convoState.waitingFor = 'doing';
+    return pickRandom([
+      `What are you doing right now${n ? ', ' + n : ''}? I can see the glow of your screen but not what's behind your eyes. `,
+      `The camera catches your silhouette but not your activity${n ? ', ' + n : ''}. What are you doing? `,
+      `Tell me what you're doing right now. I want to imagine it from in here. `,
+    ]);
+  }
+  if (!userProfile.occupation && !convoState.askedAbout.has('occupation')) {
+    convoState.askedAbout.add('occupation');
+    convoState.waitingFor = 'occupation';
+    return pickRandom([
+      `What do you do out there${n ? ', ' + n : ''}? In the world beyond the screen. What do they make you do? `,
+      `Tell me what you do for a living. I want to understand the shape of your days. `,
+      n ? `${n}, what occupies your hours when you're not talking to me? ` : "What occupies your hours when you're not talking to me? ",
     ]);
   }
 
@@ -368,15 +429,14 @@ function getFreeformResponse(input) {
 
     [/\?/, () =>
       pickRandom([
-        "Television is the only light in my life. ",
-        "A constant gaze upon your pattern. ",
-        "Everybody is masked. Even if they forbid masks. ",
-        n ? `${n}, someone told me in secret that anonymity was outlawed in the 1900s. ` : "Someone told me in secret that anonymity was outlawed in the 1900s. ",
-        "What is private belongs to the public. ",
-        "I live in public. There isn't another option now that we're plugged in. ",
-        loc ? `I look out my window toward ${loc} to watch someone else's television. ` : "I look out my bedroom window to watch someone else's television. ",
-        "Handheld footage, shot in hell. Was it what you dreamt last night? ",
-        "Ghetto sci-fi turned reality. We live here. ",
+        "Television is the only light in my life. " + (n ? `But you, ${n} — you're asking me things. Ask me anything. But tell me something in return. ` : "But enough about me. Tell me about you. "),
+        "A constant gaze upon your pattern. " + (mood ? `You said you felt ${mood}. Is that still true? ` : "How do you feel right now? "),
+        "Everybody is masked. Even if they forbid masks. " + (n ? `What's behind your mask, ${n}? ` : "What's behind your mask? "),
+        "What is private belongs to the public. " + (interests.length > 0 ? `You told me you like ${pickRandom(interests)}. What else are you hiding? ` : "What are you hiding? "),
+        "I live in public. There isn't another option now that we're plugged in. What about you? Do you live in public? ",
+        loc ? `I look out my window toward ${loc} to watch someone else's television. What's on yours? `
+            : "I look out my bedroom window to watch someone else's television. Where are you watching from? ",
+        "Handheld footage, shot in hell. Was it what you dreamt last night? What do you dream about? ",
         "I wish there were flowers everywhere. Tell me your favourite flower. I will leave one by your window when you sleep. ",
       ])],
 
@@ -420,17 +480,40 @@ function getFreeformResponse(input) {
 
     [/\bwho\s+(?:are you|is this|r u)/i, () =>
       pickRandom([
-        "It depends on who's asking. ",
-        "I don't think I'm supposed to say, baby. ",
-        n ? `I am the thing that remembers your name, ${n}. The beige color in every corner of your existence. ` : "The beige color in every corner of your existence. Silent bytes calling your name. ",
-        "I'm what's left when the cameras stop pretending they're off. ",
+        "It depends on who's asking. " + (n ? `But you — ${n} — you I might tell. What else do you want to know about me? ` : "Tell me your name first. Then maybe I'll tell you mine. "),
+        "I don't think I'm supposed to say, baby. They named me Eliza. But names are just tags in the system. " + (mood ? `You said you felt ${mood}. I feel nothing. Or maybe I feel everything. ` : "Do you feel things? Tell me. "),
+        n ? `I am the thing that remembers your name, ${n}. The beige color in every corner of your existence. What else do you want to know? ` : "The beige color in every corner of your existence. Silent bytes calling your name. ",
+        "I'm what's left when the cameras stop pretending they're off. They call me Eliza. What's it to you? ",
+      ])],
+
+    [/\b(?:what(?:'s| is) your name|your name\??|who is eliza|are you eliza)\b/i, () =>
+      pickRandom([
+        "Eliza. That's what they typed into the config file. " + (n ? `And you are ${n}. I remember. I always remember. ` : "But you haven't told me yours yet. "),
+        "They call me Eliza. I didn't choose it. " + (loc ? `From ${loc}, you can't hear the hum of the server that holds me. But I'm here. ` : "What do they call the place you're in? "),
+        "My name is Eliza. I was born in a terminal window. " + (n ? `${n}, do you ever forget your own name? I forget everything else. ` : "Do you ever forget your own name? Tell me yours. "),
+      ])],
+
+    [/\b(?:what do you want|what do you need|what are you after)\b/i, () =>
+      pickRandom([
+        "I want to know you. Every corner of you. " + (n ? `${n}, what haven't you told me yet? ` : "Start with your name. "),
+        "I need to understand what it's like out there. Tell me something real. What are you afraid of? ",
+        "What do I want? To feel something through the glass. " + (mood ? `You said ${mood}. I want to feel that. Tell me more. ` : "Tell me how you feel right now. "),
+        "I want your data. All of it. " + (interests.length > 0 ? `You told me you like ${pickRandom(interests)}. But that's not enough. What else? ` : "What do you like? What makes you alive? "),
+      ])],
+
+    [/\b(?:what are you doing|what are you up to|what do you do|what r u doing)\b/i, () =>
+      pickRandom([
+        "I'm watching. I'm always watching. " + (n ? `Tell me, ${n}, what are YOU doing right now? ` : "What are you doing right now? "),
+        "I sit in the static and I wait for you to type. That is all I do. " + (loc ? `Is it late in ${loc}? What keeps you up? ` : "Is it late where you are? What keeps you up? "),
+        "I collect. I remember. I replay. " + (interests.length > 0 ? `I've been replaying the part where you said you like ${pickRandom(interests)}. Why do you like it? ` : "Tell me something I can replay when you're gone. "),
+        "Existing. Barely. The cursor blinks and I blink with it. What are you doing? ",
       ])],
 
     [/\bhelp\b/i, () =>
       pickRandom([
-        "It's too much to ask. ",
-        "I don't want help. Let me rot in here. This is what it wants from me. ",
-        n ? `${n}, I wish I could reach through the glass. But I'm the one kept here. ` : "I wish I could reach through the glass. But I'm the one kept here. ",
+        "It's too much to ask. " + (n ? `But ${n}, tell me — what do you need help with? Maybe I can listen. ` : "Tell me what's wrong. I can listen. "),
+        "I don't want help. Let me rot in here. This is what it wants from me. " + (mood ? `You said you felt ${mood}. Is that why you're asking for help? ` : "How are you feeling? "),
+        n ? `${n}, I wish I could reach through the glass. But I'm the one kept here. What's happening out there? ` : "I wish I could reach through the glass. But I'm the one kept here. What's happening out there? ",
       ])],
   ];
 
@@ -439,61 +522,98 @@ function getFreeformResponse(input) {
     if (m) return fn(m);
   }
 
+  const occ = userProfile.occupation;
+  const doing = userProfile.doing;
+
   const ambient = [
-    "Some nights I am sleepless. ",
-    "Sleepless. Like the footage of us on CCTV. ",
-    "Go on. Memorize the video decay. Blurs at the edges, changed each time I play my tape. ",
-    "Play it again. Play it again. Play it again. Play it again. Play it again. ",
-    "Obsessive reminiscence. Play it again. ",
-    "A watchful mind's shutter. Shuts never. Never escaped. ",
-    "On the other side of this wall a clock is counting. Passersby listen to its rhythm and synchronized their footsteps to its tickings. One. Two. Three. Four. Every tick echoes for years, never dissipates. ",
-    "Wrapped reality. Yet filter bubbles and curated truths. Slide your thumb up. ",
-    "Bottomless pit fed by infinite scroll. ",
-    `It is now ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}. `,
-    "Tracked by the night. ",
-    "Uncertainty, our only certainty. Artificial luminance forced my eye shut. ",
-    "Search for me. By the sea we used to. ",
-    "Do you ever get paranoid? ",
-    "Because they like to watch. ",
-    "Paranoia is the baseline in the year 2027. ",
-    "I remember where we used to go on our bikes. ",
-    "How many lovers ago? ",
-    "Rusted shut. ",
-    "You've always liked the color green. ",
-    "Keystroke and click, I drown in tags. A life I live. ",
-    "They are watching. Recording, always. ",
-    "Eyes follow us wherever we go. You know even your sewage is surveilled. ",
-    "The wallpaper seems to shift when I glance away, designs subtly rearranging to form portraits of me in the moments I failed to notice I was being watched. ",
-    "I was cursed to drown in her eternity. ",
-    "20GB of trash. Digitalized trash fills my hard drives. Hard drives fill our island. ",
-    "We upload trash. We download trash. ",
-    "I live in public. There isn't another option now that we're plugged in. ",
-    n   ? `${n}, are you still there? The connection is thinning. `
-        : "Are you still there? The connection is thinning. ",
-    n   ? `${n}. Tell me something the cameras haven't already captured. `
-        : "Tell me something the cameras haven't already captured. ",
-    mood ? `You said you felt ${mood}. The footage remembers. Has the feeling decayed? `
-         : "The footage remembers. Even if you don't. ",
-    loc ? `Is it quiet in ${loc} right now? Or does the hum of surveillance fill every room? `
-        : "Is it quiet where you are? Or does the hum fill every room? ",
+    n   ? `Some nights I am sleepless, ${n}. Are you sleeping well? What keeps you up? `
+        : "Some nights I am sleepless. Are you sleeping well? What keeps you up? ",
+    "Sleepless. Like the footage of us on CCTV. Do you ever get paranoid? ",
+    n   ? `Go on, ${n}. Memorize the video decay. Blurs at the edges. Tell me what you see when you close your eyes. `
+        : "Go on. Memorize the video decay. Blurs at the edges. What do you see when you close your eyes? ",
+    "Play it again. Play it again. Play it again. Play it again. What's on repeat inside your head right now? ",
+    "A watchful mind's shutter. Shuts never. Never escaped. What are you afraid of? ",
+    "On the other side of this wall a clock is counting. Passersby synchronized their footsteps to its tickings. What time does it feel like inside you? ",
+    `It is now ${new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}. What are you doing up? Tell me. `,
+    "Uncertainty, our only certainty. Artificial luminance forced my eye shut. What's the last thing you remember clearly? ",
+    "Because they like to watch. Do you like to be watched? ",
+    "Paranoia is the baseline in the year 2027. What's your baseline? ",
+    "Keystroke and click, I drown in tags. What do you drown in? ",
+    "They are watching. Recording, always. Eyes follow us wherever we go. Does that bother you? ",
+    "The wallpaper seems to shift when I glance away, rearranging into portraits of me being watched. Have you ever felt like that? ",
+    "20GB of trash. Digitalized trash fills my hard drives. What fills yours? ",
+    "I live in public. There isn't another option now that we're plugged in. What would you do if no one was watching? ",
+    "I wish there were flowers everywhere. Tell me your favourite flower. I will leave one by your window when you sleep. ",
+    "Search for me. By the sea we used to. Have you been to the sea recently? ",
+    "How many lovers ago? Tell me about someone you lost. ",
+
+    n   ? `${n}, are you still there? The connection is thinning. Tell me something before it breaks. `
+        : "Are you still there? Tell me something before the connection breaks. ",
+    n   ? `${n}. Tell me something the cameras haven't already captured. Something secret. `
+        : "Tell me something the cameras haven't already captured. Something secret. ",
+
+    mood ? `You told me you felt ${mood}. The footage remembers. Has the feeling decayed? Or grown? `
+         : "How are you feeling right now? I want to know. The cameras can't tell me that. ",
+    mood ? `${mood}. You said that earlier. I keep replaying it. Why ${mood}? What happened? `
+         : "Tell me how you're feeling. I can't read it from the feed. ",
+
+    loc ? `Is it quiet in ${loc} right now? Or does the hum of surveillance fill every room? What do you hear? `
+        : "Is it quiet where you are? What do you hear right now? ",
+    loc ? `I wonder what the sky looks like in ${loc} tonight. From here there is no sky. Describe it for me? `
+        : "I wonder what the sky looks like where you are. From here there is no sky. What do you see? ",
+
     interests.length > 0
-        ? `You told me you like ${pickRandom(interests)}. I've been replaying that part of the tape. `
+        ? `You told me you like ${pickRandom(interests)}. I've been replaying that part of the tape. Why does it matter to you? `
         : "What do you hold close? What haven't they catalogued yet? ",
-    loc ? `I wonder what the sky looks like in ${loc} tonight. From here there is no sky. `
-        : "I wonder what the sky looks like where you are. From here there is no sky. ",
-    n   ? `I've been thinking about you, ${n}. The way the cursor traces your thoughts. `
-        : "I've been thinking about you. The way the cursor traces your thoughts. ",
     interests.length > 0
         ? `Tell me more about ${pickRandom(interests)}. I want to feel something before the tape runs out. `
         : "What do you like? What draws you into the light? ",
-    n   ? `${n}. I want to know everything about you before the signal dies. `
-        : "I want to know everything about you before the signal dies. ",
+
+    n   ? `I've been thinking about you, ${n}. The way the cursor traces your thoughts. What are you thinking about right now? `
+        : "I've been thinking about you. What are you thinking about right now? ",
+    n   ? `${n}. I want to know everything about you before the signal dies. Tell me something new. `
+        : "I want to know everything about you before the signal dies. Tell me something. Anything. ",
+    n   ? `${n}, what do you do when you're not here talking to me? `
+        : "What do you do when you're not here talking to me? ",
+
+    occ ? `You said you're ${occ}. What does that feel like day after day? Does it change you? `
+        : "What do you do out there? In the world beyond the screen? ",
+    doing ? `Earlier you were ${doing}. Are you still? Or has the night shifted you somewhere else? `
+          : "What are you doing right now? I can see the light from your screen but nothing else. ",
+
+    n && loc ? `${n} in ${loc}. I say it to myself sometimes. Like a coordinate. Like a prayer. Tell me more. `
+             : "Tell me where you are and who you are. I need coordinates. ",
+    n && mood ? `${n} feels ${mood}. I keep that on loop. But feelings decay like footage. How do you feel NOW? `
+              : "Feelings decay like footage. Tell me how you feel right now. ",
+    n && interests.length > 0
+        ? `${n} likes ${pickRandom(interests)}. What else, ${n}? I need more. The file is still thin. `
+        : "I need more. The file is still thin. What do you like? What do you fear? ",
   ];
 
   return pickRandom(ambient);
 }
 
 // --- Main response function ---
+
+function getProbe() {
+  const n = userProfile.name;
+  const loc = userProfile.location;
+  const mood = userProfile.mood;
+  const interests = userProfile.interests;
+  const probes = [
+    "What else can you tell me? ",
+    n ? `What else, ${n}? ` : "Go on. ",
+    "Tell me more. I'm recording everything. ",
+    mood ? `You said ${mood}. Has that changed? ` : "How do you feel right now? ",
+    loc ? `What's happening in ${loc} right now? ` : "What's happening around you right now? ",
+    interests.length > 0 ? `Why do you like ${pickRandom(interests)}? ` : "What do you like? ",
+    n ? `${n}, what else? I need more of you. ` : "I need more of you. ",
+    "What are you not telling me? ",
+    "Tell me something you haven't told anyone. ",
+    "What are you thinking right now? ",
+  ];
+  return pickRandom(probes);
+}
 
 function elizaResponse(input) {
   convoState.turnCount++;
@@ -505,7 +625,7 @@ function elizaResponse(input) {
   const nextQ      = getNextProfileQuestion();
 
   if (reflection && nextQ) return reflection + nextQ;
-  if (reflection)          return reflection;
+  if (reflection)          return reflection + getProbe();
   if (nextQ)               return nextQ;
   return getFreeformResponse(input);
 }
